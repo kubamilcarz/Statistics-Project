@@ -1,0 +1,301 @@
+#ANOVA
+library(haven)
+setwd("~/Documents/Documents_Anna_MacBook_Pro/Classes/stats for ml/OLS GLM")
+df <- read_sav("Air-Traffic_Controllers.sav")
+df$Group
+
+df$Group <- factor(df$Group)
+levels(df$Group)
+levels(df$Group) <- c("Non-Smoking Group", "Delayed Smoking Group", 
+                      "Active Smoking Group")
+
+
+summary(df$Group)
+
+#Are there significant differences between different groups
+#in the memory test errors (Memory_Err)?
+
+#H0: no difference p > 0.05 # (variance within groups is 
+#higher than between groups)
+#H1: there are differences p < 0.05 (variance between groups
+#is higher than within groups)
+
+# p value is low H0 must go
+
+library(stats)
+
+analysis_of_var_memory <- aov(Memory_Err~Group, data = df)
+summary(analysis_of_var_memory)
+
+#post hoc - comparisons
+TukeyHSD(analysis_of_var_memory, p.adj = "fdr")
+#Post hoc analysis to compare between which groups are significant differences
+#adjustment for FDR!
+#significant = lower p < 0.05
+#Active smoking vs non-smoking significant difference between groups
+#Active smoking were making 18.7 more errors on memmory test more
+#than non-smoking group
+
+
+qf(.025, 2, 42, lower.tail = FALSE) #0.025 - we have two tailed test p / 2 
+#q - quantiles for F ditribution which allows us to reject H0
+
+
+#point plot 
+library(ggpubr)
+ggerrorplot(df, x = "Group", y = "Memory_Err", 
+            desc_stat = "mean_ci", 
+            error.plot = "errorbar", 
+            add = "mean")
+
+
+
+#repeated ANOVA
+df <- read_sav("one-way ANOVA repeated measures.sav")
+df
+library(tidyr)
+
+df_long = df %>%
+  gather("before", "after_5_min", "after_10_min",
+         key = time, value = score)
+df_long
+
+#repeated_anova <- aov(score~time, data = df_long)
+
+#summary(repeated_anova)
+
+# p  > 0.05
+#0.0048 - sifnificant
+
+
+#REPEATED MEASURES PROPER ANALYSIS
+repeated_anova <- aov(score~time + Error(ID/time), 
+                      data = df_long)
+#Error (ID/time) - score depends not only on time
+#but also on the person (ID)
+summary(repeated_anova)
+
+#P > 0.05 - insignificant - no difference
+#p < 0.05 - significant - there are differences
+
+#There are no significant differences between time 
+#measures in performance of students
+
+#Post hoc analysis - we compare pairs
+library(emmeans)
+means_comparison <- emmeans(repeated_anova, ~time)
+pairs(means_comparison) #tukey adjustment for multiple comparisons
+pairs(means_comparison, adjust = "bonf")
+#bonferroni adjustment for multiple comparisons - more conservative
+#test will have lower power (it will be difficult to observe small effect)
+
+library(ggpubr)
+ggline(df_long, x = "time", y = "score", add = "mean_ci")
+
+
+
+#lm () - OLS = aov()
+
+library(ggplot2)
+library(MASS)
+head(anorexia)
+
+summary(anorexia$Treat)
+#CBT - cognitive - behavioral treatment
+#control condition
+#Family treatment 
+
+anorexia["Weight_Gain"] = anorexia["Postwt"] - anorexia ["Prewt"]
+
+head(anorexia)
+
+ggplot(anorexia, aes(x = Treat, y = Weight_Gain)) +
+  geom_point()
+
+ggerrorplot(anorexia, x = "Treat", y = "Weight_Gain", 
+            desc_stat = "mean_ci", 
+            error.plot = "errorbar", 
+            add = "mean")
+anorexia_linear <- lm(Weight_Gain ~ Treat, data = anorexia)
+anova(anorexia_linear) #treatment significant predictor of weight gain
+summary(anorexia_linear)
+
+contrasts(anorexia$Treat)
+
+#baseline condition
+#reference CBT     0  0
+#change to Control
+
+anorexia$Treat <- relevel(anorexia$Treat, ref = "Cont")
+contrasts(anorexia$Treat)
+
+anorexia_linear <- lm(Weight_Gain ~ Treat, data = anorexia)
+anova(anorexia_linear) 
+#Treatment significant predictor of Weight Gain
+summary(anorexia_linear)
+#Significant difference between FT and control condition
+#FT has higher mean by 7.715
+
+#lm and aov
+anorexia_anova <- aov(Weight_Gain ~ Treat, data = anorexia)
+summary(anorexia_anova)
+
+TukeyHSD(anorexia_anova, p.adj = "fdr")
+anorexia
+#Interaction - adding two predictors into lm()
+ggplot(anorexia, aes(x = Prewt, y = Weight_Gain, 
+                     shape = Treat))+
+  geom_point(size = 2.5)+
+  geom_smooth(method = lm, se = FALSE, aes(linetype = Treat))
+
+
+anorexia_with_interaction <-lm(Weight_Gain~Treat+Prewt+Treat*Prewt,
+                               data = anorexia)
+anova(anorexia_with_interaction)
+#Check if interaction is significant
+summary(anorexia_with_interaction)
+#If model is significant p-value - significant model
+#How much variance you predict Adjusted R-squared: we explain 32% of variance
+#in Weight gain
+
+
+#Compare which model is better
+anova(anorexia_linear, anorexia_with_interaction)
+
+#Second model with interaction explains Weight Gain better
+#Relationship between pre-experimental weight and weight gain 
+#is different for control vs treatment groups
+
+
+#Linear regression with multiple predictors
+head(Boston)
+#https://www.kaggle.com/datasets/vikrishnan/boston-house-prices
+
+regression_multiple <- lm(medv~age+crim, data = Boston)
+summary(regression_multiple)
+#anova(regression_multiple)
+
+#p-value: < 2.2e-16 - model significant
+#Adjusted R-squared:  0.2134  - 21% of variance in house prices
+#were explained by crime rate and age
+#Both predictors are significant
+#Increase in age of house by 1 year will be linked to decrease in 
+#price by 0.09$ (keeping other predictors constant).
+
+#Assumptions checking
+
+plot(regression_multiple)
+#straight line - residuals are same for 
+#low, average and high values 
+#not normal distribution of residuals
+#leverage points 
+plot(regression_multiple, 4)
+#plot(regression_multiple, 2)
+#point 381 is having highest cooks distance
+#we should consider removing it
+
+durbinWatsonTest(regression_multiple)
+#H0: there is no autocorrelation of residuals
+#H1: there is autocorrelation
+#autocorelation present
+
+#heteroscedasticity assumption
+library(car)
+ncvTest(regression_multiple)
+
+#H0: heteroscedasticity (assumption is met)
+#H1: homoscedasticity (the assumption is broken)
+
+
+#Generalized linear models 
+#Logistic = binomial distribution
+library(AER)
+data("Affairs", package = "AER")
+summary(Affairs)
+
+Affairs$binary_affairs[Affairs$affairs > 0] <- 1
+Affairs$binary_affairs[Affairs$affairs == 0] <- 0
+table(Affairs$binary_affairs)
+
+Affairs$binary_affairs <- factor (Affairs$binary_affairs,
+                                  levels = c(0,1),
+                                  labels = c("No affair", "Had affair"))
+
+table(Affairs$binary_affairs)
+
+fit_full <- glm(binary_affairs~.-affairs, data = Affairs, family = binomial())
+summary(fit_full)
+
+
+fit_reduced <- glm(binary_affairs~age+yearsmarried+religiousness+rating, 
+                   data = Affairs, family = binomial())
+summary(fit_reduced)
+
+anova(fit_reduced, fit_full, test = "Chisq")
+
+#Pr(>Chi) = 0.21 - reduced model is fitted as well as full model
+#Model 1 is simplier - better!
+
+#Estimate from summary are in log(odds)
+summary(fit_reduced)
+coef(fit_reduced)
+exp(coef(fit_reduced))
+
+#Years married is linked to increase of chance of affair
+#Age, religiousness and happiness are linked to decrease in odds of affair
+
+#Automatic methods of predictor selection
+model_automatic_selection <- step(fit_full, direction = "backward")
+summary(model_automatic_selection)
+
+#Overdispertion problem can occur in GLM! Use quasi models
+fit_overdispertion_binomial <- glm(binary_affairs~age+yearsmarried+religiousness+rating, 
+                                    data = Affairs, family = quasibinomial())
+
+summary(fit_overdispertion_binomial)
+fit_reduced
+sum(residuals(fit_overdispertion_binomial, type = "deviance")^2)
+pchisq(summary(fit_overdispertion_binomial)$dispersion * 
+         fit_reduced$df.residual,fit_reduced$df.residual, lower = F) #p value
+#H0: no overdispersion
+#H1: overdispersion
+
+#No overdispersion is present (insignificant)
+
+#Poisson regression
+data(breslow.dat, package = "robust")
+names(breslow.dat)
+#"sumY" - number of seizures
+#Base - how many seizures person had before intervention
+#Trt - if person received placebo or experimental drug
+table(breslow.dat$Trt)
+
+ggplot(breslow.dat, aes(x = sumY))+
+  geom_histogram()
+
+#skewed data
+#integers (nr of seizures cannot be measured in decimal points)
+fit_poisson <- glm(sumY~Base+Age+Trt, data = breslow.dat, 
+                   family = poisson())
+summary(fit_poisson)
+
+#Estimates are in log(odds) - not intuitive in interpretation
+exp(coef(fit_poisson))
+#Base and Age increase chances of getting seizure
+#Drug is decreasing chances compared to placebo
+
+#Overdispertion! MUST BE CHECKED!
+library(qcc)
+qcc.overdispersion.test(breslow.dat$sumY, type = "poisson")
+#H0: no overdispersion
+#H1: overdispersion present
+
+#p-value - significant - overdispersion present
+#Cannot trust errors and significance tests
+
+fit_poisson_quasi <- glm(sumY~Base+Age+Trt, data = breslow.dat, 
+                   family = quasipoisson())
+summary(fit_poisson_quasi)
+
+
+

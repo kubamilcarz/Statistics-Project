@@ -1,0 +1,168 @@
+setwd('/Users/akovbasiuk/Documents/Documents_Anna_MacBook_Pro/Classes/stats for ml/Inferential')
+
+
+#load() - R data
+
+
+#Making estimations
+#mean of the sample
+xbar <- 83 #sample mean
+sigma <- 12 #standard deviation for the population
+n <- 5
+
+sem <- sigma / sqrt(n)
+sem #indicates how much typical value of sample mean will
+#differ from the population mean
+
+
+#Confidence intervals 95%
+sem*(-1.96)
+sem*1.96
+
+xbar + sem*(-1.96)
+
+xbar + sem*(1.96)
+
+#95% confidence interval for population mean being from 72
+#to 93
+
+
+#We check whether people are guessing coin non-randomly
+#Out of 100 people 62 guessed correctly
+#Will it be enough to say that its non-random
+
+#H0: p of success = 50% (people are guessing) - p > 0.05
+#H1: p is not equal 50% (people are not guessing) - p < 0.05
+
+binom.test(x=62, n=100, p=0.5)
+#People are not guessing
+
+#Is 51 guess be enough to tell that its non-random?
+binom.test(x = 51, n = 100, p = 0.5)
+#People are randomly guessing
+
+#Only for more than 50% chance 
+#H0: people are guessing randomly
+#H1: p is higher than 50% 
+binom.test(x = 58, n = 100, p = 0.5, alternative = "greater")
+binom.test(x = 70, n = 100, p = 0.5, alternative = "greater")
+
+
+#Goodness of fit
+load ("cards.Rdata")
+head(suit.choice)
+summary(suit.choice)
+
+#H0: All four suits were selected with equal probability
+#H0: P(25%, 25%, 25%, 25%)
+#H1:At least one of the suit-choice probabilities is different
+#H1:At least one p is not = 25%
+
+observed <- table(suit.choice)
+
+N <- 200
+
+P<- c(.25, .25, .25, .25)
+
+expected <- N*P
+expected
+
+chisq.test(observed)
+
+#manually calculating chi square
+sum((observed - expected)^2 / expected)
+
+qchisq(p = .95, 3) #critical value for specific degrees 
+#of freedom and p
+#we compare the test results to critical value
+#and make conclusions to reject H0
+#At least one p is not = 25% - people are having preferences 
+#towards cards (hearts)
+
+
+#Chi square to check the dependency of two nominal values
+
+
+load("chapek9.Rdata")
+summary(chapek9)
+cross <-table(chapek9$species, chapek9$choice)
+cross
+chisq.test(cross)
+#H0: there is no dependency between the variables
+#H1: there is a dependency
+
+#p value is < 0.05 - there is a dependency between variables
+
+round(prop.table(cross) * 100, 2)
+
+round(prop.table(cross, 2) * 100, 2) #each column sums to 1
+round(prop.table(cross, 1) * 100, 2) #each row sums up to 1
+
+#There is a dependency. Data story was prefered by both human
+#and robot more
+
+#Effect size Cramer's V
+#install.packages("lsr")
+library(lsr)
+cramersV(cross) #strong dependency
+
+cramersV(observed) #moderate effect
+
+
+#t distribution
+#M of students in the university is 67.5
+#Is mean of AI students different from the population (from
+#all students in the uni)?
+
+load("zeppo.Rdata")
+mean(grades)
+
+t.test(x = grades, mu = 67.5)
+
+#H0: there is no difference between the mean of the sample
+#and population
+#H1: there is a difference between mean of sample and population
+
+#We can reject H0 - mean of students of AI 
+#is different than of the rest of the university
+#Our test value 2.26 is bigger than the critical value
+#So we are able to reject H0 on the level of 0.05
+
+cohensD(x = grades, mu = 67.5)
+
+#Students of AI are achieving grades M = 72.3
+#Which are about 0.5 SD higher than the average in the
+#population 
+#The effect size is medium
+(72.3-67.5) / sd(grades)
+72.3-67.5
+sd(grades)
+
+
+#Differences between means
+load("harpo.Rdata")
+library(dplyr)
+
+harpo %>%
+  group_by(tutor) %>%
+  summarize (Mean = mean(grade),
+             SD = sd(grade))
+
+#To see distribution
+#Histogram
+library(ggplot2)
+ggplot(harpo, aes(x = grade, fill = tutor)) +
+  geom_histogram() +
+  facet_wrap(~tutor)
+
+
+#Boxplot or violin plot
+ggplot(harpo, aes(x = grade, y = tutor)) +
+  geom_violin() +
+  geom_boxplot(width = ) +
+  geom_jitter()
+
+#But for two groups to compare distributions
+#we can use multi density chart
+
+
